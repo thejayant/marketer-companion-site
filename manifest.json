@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Marketer Companion",
+  "short_name": "Marketer Companion",
+  "version": "0.2.1",
+  "description": "Inspect URLs with Google Search Console, run live tests, and check GA4/Search Console performance.",
+  "action": {
+    "default_title": "Marketer Companion",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "identity",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://accounts.google.com/*",
+    "https://oauth2.googleapis.com/*",
+    "https://searchconsole.googleapis.com/*",
+    "https://www.googleapis.com/*",
+    "https://analyticsadmin.googleapis.com/*",
+    "https://analyticsdata.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

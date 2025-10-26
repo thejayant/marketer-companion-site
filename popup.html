@@ -1,0 +1,638 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Marketer Companion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* === iOS Fluid Glass — Emerald Soft === */
+    * { box-sizing: border-box; }
+    :root{
+      /* tuned palette (comfortable green) */
+      --bg:#0b0f12;                /* deep charcoal */
+      --bg2:#0e1418;
+      --text:#e8f3ec;
+      --muted:#a3b6ab;
+
+      --glass: rgba(18,24,28,.55); /* frosted panel */
+      --card:  rgba(22,28,32,.45); /* frosted card */
+      --hair:  rgba(140,190,165,.22); /* inner stroke */
+      --accent:#1fb86b;            /* softer neon */
+      --accent-2:#14a25c;
+
+      --ok:#1ec774; --warn:#f1b84a; --bad:#ef5350;
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.45);
+      --ring: 0 0 0 2px rgba(10,30,22,.9), 0 0 0 4px rgba(31,184,107,.35);
+    }
+
+    /* never intercept clicks; sit behind the app */
+.fx-blobs,
+.fx-noise{
+  pointer-events: none !important;
+  z-index: -1 !important;   /* push behind everything */
+}
+
+/* the app stack is above the ambient layers */
+.shell{ position: fixed; inset:0; overflow:hidden; display:flex; flex-direction:column; height:100%; width:100%; z-index: 10; }
+.topbar{ z-index: 20; }   /* already present; keep above */
+.body, .sidebar, .main, .content{ position: relative; z-index: 11; }
+
+
+    html,body{
+      background:
+        radial-gradient(1200px 800px at -10% -20%, #0f221a 2%, transparent 55%),
+        radial-gradient(900px 700px at 110% 0%, #0d1915 10%, transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      color:var(--text);
+      font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      margin:0; padding:0;
+      width:800px; height:600px; overflow:hidden;
+    }
+    body { position: relative; }
+
+    /* Ambient soft shapes */
+    .fx-blobs, .fx-noise{
+      position:fixed; inset:-15%; pointer-events:none; z-index:0;
+    }
+    .fx-blobs{
+      background:
+        radial-gradient(420px 300px at 18% 12%, rgba(31,184,107,.16), transparent 65%),
+        radial-gradient(480px 360px at 82% 8%, rgba(31,184,107,.12), transparent 70%),
+        radial-gradient(380px 260px at 60% 90%, rgba(18,120,72,.14), transparent 65%);
+      filter: blur(24px);
+      opacity:.55; mix-blend-mode:plus-lighter;
+    }
+    .fx-noise{
+      background-image:url("data:image/svg+xml;utf8,\
+      <svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>\
+      <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0 .05 0'/></feComponentTransfer></filter>\
+      <rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      background-size:160px 160px; opacity:.65;
+    }
+
+    .outer_row{    flex-wrap: wrap;}
+    .inner_row{width: 100%;}
+
+    .shell{
+      position:fixed; inset:0; overflow:hidden; display:flex; flex-direction:column;
+      height:100%; width:100%;
+    }
+
+    /* --- Glass helpers --- */
+    .glass{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)), var(--glass);
+      border: 1px solid var(--hair);
+      backdrop-filter: blur(14px) saturate(130%);
+      -webkit-backdrop-filter: blur(14px) saturate(130%);
+    }
+    .inner-stroke{
+      position:relative;
+    }
+    .inner-stroke::after{
+      content:""; position:absolute; inset:0; border-radius:inherit;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.25);
+      pointer-events:none;
+    }
+
+    /* Topbar */
+    .topbar{display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
+      border-bottom:1px solid var(--hair);
+      box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.25);
+      z-index:2;
+    }
+    .topbar h1{font-size:16px; margin:0; letter-spacing:.2px}
+    .topbar small{color:var(--muted); font-weight:600; background:linear-gradient(180deg, rgba(31,184,107,.25), rgba(31,184,107,.12));
+      padding:2px 8px; border-radius:999px; border:1px solid var(--hair)}
+
+    /* Body: sidebar + main */
+    .body{display:flex; min-height:0; flex:1 1 auto; z-index:1}
+
+    /* Sidebar */
+    .sidebar{
+      width:220px; flex:0 0 220px; padding:10px 10px; overflow:auto; display:flex; flex-direction:column;
+      border-right:1px solid var(--hair);
+    }
+    .side-title{color:var(--muted); font-size:12px; margin:4px 8px 10px}
+
+    .nav{display:flex; flex-direction:column; gap:8px}
+    .nav button{
+      display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:12px;
+      background: var(--card); color:#b8c7be; border:1px solid var(--hair); cursor:pointer; text-align:left;
+      transition: transform .08s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+    }
+    .nav button:hover{ background: rgba(26,34,38,.55); color:var(--text); }
+    .nav button.active{
+      color:var(--text);
+      border-color: rgba(31,184,107,.45);
+      box-shadow: 0 0 0 1px rgba(31,184,107,.25) inset, 0 10px 28px rgba(31,184,107,.10);
+      background: linear-gradient(180deg, rgba(31,184,107,.16), rgba(31,184,107,.06));
+    }
+    .nav svg{width:18px; height:18px; flex:0 0 18px; opacity:.95}
+
+    /* Credits block */
+    .credits{
+      margin-top:auto; padding:12px; border-top:1px solid var(--hair);
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border-radius:12px 12px 0 0;
+    }
+    .credits .creator{ font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; margin-bottom:6px }
+    .badge-pill{ font-size:11px; color:var(--text); padding:3px 8px; border-radius:999px; border:1px solid var(--hair); background:rgba(31,184,107,.10) }
+    .mini-account{ font-size:12px; color:var(--muted); word-break:break-all }
+
+    /* Main (only this scrolls) */
+    .main{flex:1 1 auto; display:flex; flex-direction:column; min-width:0; min-height:0}
+    .content{padding:14px; overflow:auto; flex:1 1 auto; min-height:0}
+    .row{display:flex; gap:10px; align-items:center}
+    .row + .row{margin-top:10px}
+
+    /* Inputs + buttons in glass */
+    select,input,button{
+      background: var(--card); color: var(--text); border:1px solid var(--hair);
+      border-radius:12px; padding:10px 12px; outline:none;
+      transition: box-shadow .15s ease, background .15s ease, border-color .15s ease;
+    }
+    select, input{width:100%}
+    button{cursor:pointer}
+    button:hover{ background: rgba(24,32,36,.55) }
+    button:focus-visible, select:focus-visible, input:focus-visible{
+      box-shadow: var(--ring); border-color: rgba(31,184,107,.45);
+    }
+    .btn-wide{
+      width:100%;
+      background: linear-gradient(180deg, rgba(31,184,107,.22), rgba(31,184,107,.10));
+      border-color: rgba(31,184,107,.45);
+    }
+    .btn-wide:hover{
+      background: linear-gradient(180deg, rgba(31,184,107,.30), rgba(31,184,107,.14));
+    }
+
+    .section{
+      background: var(--glass);
+      border:1px solid var(--hair);
+      border-radius:16px; padding:12px; margin-top:12px;
+      box-shadow: var(--shadow-lg);
+    }
+    .hidden{display:none}
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)), var(--card);
+      border:1px solid var(--hair); border-radius:14px; padding:10px 12px; margin-top:10px;
+    }
+    .row.kv{align-items:flex-start}
+    .kv .k{width:150px;color:var(--muted)}
+    .badge{display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--hair); font-size:12px; background:rgba(255,255,255,.03)}
+    .badge.good{background:rgba(30,199,116,.12); border-color:rgba(30,199,116,.35)}
+    .badge.ok{background:rgba(241,184,74,.12); border-color:rgba(241,184,74,.35)}
+    .badge.bad{background:rgba(239,83,80,.12); border-color:rgba(239,83,80,.35)}
+    kbd{background:#111726; border:1px solid var(--hair); border-radius:6px; padding:0 6px}
+
+    .pills{display:flex; gap:8px; flex-wrap:wrap}
+    .pill{padding:8px 12px; border-radius:999px; border:1px solid var(--hair); background:var(--card); color:#b9c8bf; cursor:pointer; user-select:none}
+    .pill:hover{ color:var(--text) }
+    .pill.active{border-color: rgba(31,184,107,.45); color:var(--text); background: linear-gradient(180deg, rgba(31,184,107,.14), rgba(31,184,107,.06))}
+    .scope{display:flex; align-items:center; gap:10px}
+
+    /* two switch styles used in your markup */
+    /* 1) div.switch (Performance scope) */
+    .switch{width:46px; height:26px; background:rgba(28,36,32,.85); border:1px solid var(--hair); border-radius:999px; position:relative; cursor:pointer; flex:0 0 auto}
+    .switch::after{content:""; position:absolute; top:2px; left:2px; width:22px; height:22px; background:#eaf6ee; border-radius:50%; transition:left .15s ease}
+    .switch.on{background:linear-gradient(180deg,#1b4b35,#153a2a)}
+    .switch.on::after{left:22px}
+
+    /* 2) label.switch > input#gaCompare (GA compare) */
+    #panelAnalytics label.switch{
+      display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
+    }
+    #panelAnalytics label.switch input{
+      appearance:none; -webkit-appearance:none; width:44px; height:24px; border-radius:999px;
+      background:rgba(28,36,32,.85); border:1px solid var(--hair); position:relative; outline:none;
+      transition:background .15s ease,border-color .15s ease;
+    }
+    #panelAnalytics label.switch input::after{
+      content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#eaf6ee; border-radius:50%; transition:left .15s ease
+    }
+    #panelAnalytics label.switch input:checked{
+      background:linear-gradient(180deg,#1b4b35,#153a2a); border-color:rgba(31,184,107,.45)
+    }
+    #panelAnalytics label.switch input:checked::after{ left:22px }
+
+    details{margin:10px 0 0 0}
+    pre{white-space:pre-wrap}
+    .foot{
+      display:flex; 
+      align-itme:center;
+      justify-content:space-between; 
+      align-items:center; 
+      padding:10px 14px; 
+      color:var(--muted);
+      border-top:1px solid var(--hair);                 background:rgba(0,0,0,.25); 
+      backdrop-filter: blur(10px)
+    }
+    
+    .foot-links{
+  display:flex;
+  align-items:center;
+  gap:.5rem;                       /* space between the two links */
+}
+.foot-links a{
+  color:#9bd7b2;
+  text-decoration:none;
+}
+.foot-links a:hover{ text-decoration:underline; }
+
+/* optional: draw the vertical bar via CSS instead of a literal "|" */
+.foot-links a + a{
+  padding-left:.5rem;
+  border-left:1px solid rgba(255,255,255,.25);
+}
+    
+    .foot a{color:#9bd7b2; text-decoration:none}
+    .foot a:hover{text-decoration:underline}
+
+    /* GA4 polish */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .kpi{background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:12px}
+    .kpi h5{margin:0 0 6px 0;font-size:12px;color:var(--muted)}
+    .kpi .val{font-size:20px;font-weight:600}
+    .kpi .delta{font-size:12px;margin-left:8px;vertical-align:middle}
+    .kpi .delta.up{color:var(--ok)}
+    .kpi .delta.down{color:var(--bad)}
+    .kpi .spark{margin-top:6px;opacity:.7}
+
+    /* nicer table */
+    .table-compact thead th{position:sticky;top:0;background:rgba(22,30,34,.7);z-index:1}
+    .table-compact tbody tr:nth-child(odd){background:rgba(255,255,255,.02)}
+
+    /* === Analytics toolbar responsive layout === */
+    #panelAnalytics .row{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px 12px;
+      align-items: end;
+    }
+    #panelAnalytics .group{ display:flex; flex-direction:column; gap:6px }
+    #panelAnalytics .group > label{ font-size: 12px; color: var(--muted) }
+    #panelAnalytics .group select,
+    #panelAnalytics .group input[type="date"],
+    #panelAnalytics .group button{
+      width:100%; height:36px; padding:0 10px; border:1px solid var(--hair);
+      background:var(--card); color:var(--text); border-radius:10px; max-width:100%;
+    }
+    #panelAnalytics #gaCustom{ display:grid !important; grid-template-columns:1fr 1fr; gap:8px }
+    #panelAnalytics #gaCustom > label{ grid-column:1 / -1 }
+    #gaExport{ white-space: nowrap; }
+
+    @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+
+/* === Analytics layout (keeps fluid-glass theme) === */
+#panelAnalytics .ana-card{ border-radius: 14px; background: var(--card); border:1px solid var(--border); }
+#panelAnalytics .ana-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* 2 cols; first row will span both */
+  gap: 12px 12px;
+}
+#panelAnalytics .cell{ display:flex; flex-direction:column; gap:6px; }
+#panelAnalytics .cell > label{ font-size:12px; color:var(--muted); }
+#panelAnalytics .span-2{ grid-column: 1 / -1; }
+
+#panelAnalytics select,
+#panelAnalytics input[type="date"],
+#panelAnalytics button{
+  height: 38px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+#panelAnalytics .date-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* small screens: stack gracefully */
+@media (max-width: 560px){
+  #panelAnalytics .ana-grid{ grid-template-columns: 1fr; }
+  #panelAnalytics .date-grid{ grid-template-columns: 1fr; }
+}
+
+/* keep ambient glass layers from stealing clicks */
+.fx-blobs, .fx-noise, .fx-glow{
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+
+/* ========= Fluid-glass: Analytics polish ========= */
+/* 1) Top domain bar: make it full width */
+#topControls{
+  display:flex; gap:10px; width:100%;
+  margin-bottom: 10px;
+}
+#topControls > *{ flex:1 1 auto; min-width:0; }
+#topControls select, #topControls input{
+  width:100%; border-radius:12px;
+}
+
+/* 2) Analytics grid: consistent borders + focus ring */
+#panelAnalytics .ana-card{ border-radius:14px; background:var(--card); border:1px solid var(--border); }
+#panelAnalytics .ana-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+#panelAnalytics .cell{ display:flex; flex-direction:column; gap:6px; }
+#panelAnalytics .cell > label{ font-size:12px; color:var(--muted); }
+#panelAnalytics .span-2{ grid-column:1 / -1; }
+
+#panelAnalytics select,
+#panelAnalytics input[type="date"],
+#panelAnalytics button{
+  height:38px; padding:0 12px; width:100%;
+  border-radius:12px; color:var(--text);
+  background:var(--card);
+  border:1px solid var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+#panelAnalytics select:focus,
+#panelAnalytics input[type="date"]:focus,
+#panelAnalytics button:focus{
+  outline:none;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06),
+    0 0 0 2px rgba(25,195,125,.35); /* soft green ring, matches app accents */
+}
+
+/* Row for custom dates (Start/End) */
+#panelAnalytics #gaCustom{ display:none; }
+#panelAnalytics .date-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* 3) Analytics buttons: match app's primary/secondary look */
+#panelAnalytics #gaLoad{
+  background: linear-gradient(180deg, rgba(25,195,125,.16), rgba(25,195,125,.10));
+  border-color: rgba(25,195,125,.55);
+  color: #eafff5;
+}
+#panelAnalytics #gaLoad:hover{
+  border-color: rgba(25,195,125,.85);
+  box-shadow: 0 0 0 1px rgba(25,195,125,.25), 0 3px 8px rgba(0,0,0,.25) inset;
+}
+#panelAnalytics #gaExport{
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border-color: var(--border);
+}
+#panelAnalytics #gaExport:hover{
+  border-color: rgba(255,255,255,.25);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
+}
+
+/* Responsive stacking */
+@media (max-width: 560px){
+  #panelAnalytics .ana-grid{ grid-template-columns:1fr; }
+  #panelAnalytics .date-grid{ grid-template-columns:1fr; }
+}
+
+/* Ambient layers never catch clicks */
+.fx-blobs, .fx-noise, .fx-glow{ pointer-events:none !important; z-index:-1 !important; }
+
+
+  </style>
+</head>
+<body>
+<div class="fx-blobs" aria-hidden="true"></div>
+<div class="fx-noise" aria-hidden="true"></div>
+
+<div class="shell">
+  <!-- Topbar -->
+  <div class="topbar glass inner-stroke">
+    <h1>Marketer Companion</h1>
+    <small id="version">v0</small>
+  </div>
+
+  <div class="body">
+    <!-- Sidebar -->
+    <aside class="sidebar glass inner-stroke">
+  <div class="side-title">Navigation</div>
+  <div class="nav">
+    <!-- Indexing -->
+    <button id="navIndex" class="active" title="Indexing">
+      <svg aria-hidden="true" focusable="false"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="M20 20L15.8 15.8"></path>
+      </svg>
+      <span>Indexing</span>
+    </button>
+
+    <!-- Live Test (fluent flask) -->
+    <button id="navLive" title="Live Test">
+      <svg aria-hidden="true" focusable="false"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 2v4l-5 9a4 4 0 0 0 3.6 6h6.8a4 4 0 0 0 3.6-6l-5-9V2"></path>
+        <path d="M7.5 15h9"></path>
+      </svg>
+      <span>Live Test</span>
+    </button>
+
+    <!-- Analytics (bars) -->
+    <button id="navAnalytics" title="Analytics">
+      <svg aria-hidden="true" focusable="false"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 20h18"></path>
+        <path d="M6 20V10"></path>
+        <path d="M12 20V6"></path>
+        <path d="M18 20v-6"></path>
+      </svg>
+      <span>Google Analytics</span>
+    </button>
+
+    <!-- Performance (trend up) -->
+    <button id="navPerf" title="Performance">
+      <svg aria-hidden="true" focusable="false"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 17l6-6 4 4 8-8"></path>
+      </svg>
+      <span>Google Search Console</span>
+    </button>
+
+    <!-- On-Page (file text) -->
+    <button id="navOnPage" title="On-Page">
+      <svg aria-hidden="true" focusable="false"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"></path>
+        <path d="M14 2v6h6"></path>
+        <path d="M9 13h6"></path>
+        <path d="M9 17h4"></path>
+      </svg>
+      <span>On-Page</span>
+    </button>
+  </div>
+
+  <!-- Credits -->
+  <div class="credits">
+    <div class="creator">
+      <span class="badge-pill">Designed & built by <strong> Jayant </strong></span>
+      </div>
+    <div id="accountMini" class="mini-account">Signed in: -</div>
+  </div>
+</aside>
+
+
+    <!-- Main -->
+    <main class="main">
+      <div class="content">
+        <div class="row outer_row">
+          <div id="topControls">
+            <select id="sites"></select>
+            <button id="refreshSites" title="Reload properties">⟳</button>
+          </div>
+
+        <div class="row inner_row">
+          <input id="inspectUrl" placeholder="https://example.com/page" />
+        </div>
+        </div>
+        <!-- Indexing -->
+        <div id="panelIndex" class="section">
+          <div class="row"><button id="inspect" class="btn-wide">Inspect</button></div>
+          <div class="row"><button id="openGSC" class="btn-wide">Open in GSC Inspect</button></div>
+        </div>
+
+        <!-- Live Test -->
+        <div id="panelLive" class="section hidden">
+          <div class="row"><button id="liveTest" class="btn-wide">Run Live Test</button></div>
+          <div class="row"><button id="openLiveGSC" class="btn-wide">Open Live Test (GSC)</button></div>
+        </div>
+
+<!-- Analytics -->
+<!-- Analytics -->
+<section id="panelAnalytics" class="section hidden">
+  <div class="card ana-card">
+    <div class="ana-grid">
+      <!-- Row 1: GA4 Property (full width) -->
+      <div class="cell span-2">
+        <label>GA4 Property</label>
+        <select id="gaProps"></select>
+      </div>
+
+      <!-- Row 2: Range + Compare prev -->
+      <div class="cell">
+        <label>Range</label>
+        <select id="gaRange">
+          <option value="7">Last 7 days</option>
+          <option value="28">Last 28 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div class="cell">
+        <label>&nbsp;</label>
+        <label class="switch">
+          <input type="checkbox" id="gaCompare" />
+          <span>Compare prev</span>
+        </label>
+      </div>
+
+      <!-- Row 3: Custom date range (hidden unless Range=custom) -->
+      <div class="cell span-2" id="gaCustom" style="display:none">
+        <div class="date-grid">
+          <div>
+            <label>Start</label>
+            <input type="date" id="gaStart" />
+          </div>
+          <div>
+            <label>End</label>
+            <input type="date" id="gaEnd" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 4: Dimension | Metric -->
+      <div class="cell">
+        <label>Dimension</label>
+        <select id="gaDim">
+          <option value="date">date</option>
+          <option value="sessionDefaultChannelGroup">sessionDefaultChannelGroup</option>
+          <option value="country">country</option>
+          <option value="pagePathPlusQueryString">page</option>
+        </select>
+      </div>
+      <div class="cell">
+        <label>Metric</label>
+        <select id="gaMetric">
+          <option value="activeUsers">activeUsers</option>
+          <option value="sessions">sessions</option>
+          <option value="screenPageViews">screenPageViews</option>
+          <option value="eventCount">eventCount</option>
+        </select>
+      </div>
+
+      <!-- Row 5: Buttons -->
+      <div class="cell">
+        <label>&nbsp;</label>
+        <button id="gaLoad">Load Analytics</button>
+      </div>
+      <div class="cell">
+        <label>&nbsp;</label>
+        <button id="gaExport">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gaResult" class="result"></div>
+</section>
+        <!-- End Analytics -->
+
+
+        <!-- Performance -->
+        <div id="panelPerf" class="section hidden">
+          <div class="row pills">
+            <div class="pill" data-range="7">7d</div>
+            <div class="pill active" data-range="30">30d</div>
+            <div class="pill" data-range="90">90d</div>
+            <div class="pill" data-range="custom">Custom</div>
+          </div>
+
+          <div class="row scope">
+            <div id="scopeSwitch" class="switch"></div>
+            <label for="scopeSwitch">Whole property</label>
+          </div>
+
+          <div id="customRange" class="row hidden" style="gap:10px">
+            <input id="dateStart" type="date" />
+            <span style="color:var(--muted)">to</span>
+            <input id="dateEnd" type="date" />
+          </div>
+
+          <div class="row"><button id="loadPerf" class="btn-wide">Load Performance</button></div>
+        </div>
+
+        <!-- On-Page -->
+        <div id="panelOnPage" class="section hidden">
+          <div class="row"><button id="runOnPage" class="btn-wide">Run On-Page Audit</button></div>
+          <div class="card">Works without GSC access (great for prospecting). Checks title, meta, robots/canonical, headings, text length, links, images, and JSON-LD types from the current page DOM.</div>
+        </div>
+
+        <!-- Results -->
+        <div id="result"></div>
+
+        <!-- Raw JSON -->
+        <details id="rawPanel"><summary>Raw JSON</summary><pre id="raw"></pre></details>
+      </div>
+
+      <div class="foot glass">
+        <span id="accountLabel"></span>
+        <nav class="foot-links">
+        <a href="privacy.html" target="_blank" rel="noopener">Privacy</a><a href="#" id="logout">Sign out</a>
+          </nav>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script type="module" src="popup.js"></script>
+</body>
+</html>
